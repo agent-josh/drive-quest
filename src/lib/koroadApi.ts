@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import {
   DATA_GO_KR_SERVICE_KEY,
   KOROAD_DATASET_ID,
@@ -115,12 +116,24 @@ function dedupeByQuestionNumber(questions: AppQuestion[]): AppQuestion[] {
   return [...byNum.values()].sort((a, b) => a.questionNumber - b.questionNumber);
 }
 
+const FETCH_TIMEOUT_MS = Platform.OS === 'web' ? 12_000 : 30_000;
+
+async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchKoroadPage(page: number, perPage: number) {
   const url =
     `${API_BASE}?page=${page}&perPage=${perPage}` +
     `&serviceKey=${encodeURIComponent(DATA_GO_KR_SERVICE_KEY)}`;
 
-  const res = await fetch(url);
+  const res = await fetchWithTimeout(url);
   const json = (await res.json()) as {
     data?: Record<string, unknown>[];
     totalCount?: number;
@@ -178,12 +191,14 @@ export async function fetchKoroadQuestions(options?: {
     }
   }
 
+  const maxPages = Platform.OS === 'web' ? 3 : 10;
+
   try {
     const collected: AppQuestion[] = [];
     let totalCount = 0;
     let page = 1;
 
-    while (collected.length < maxItems && page <= 10) {
+    while (collected.length < maxItems && page <= maxPages) {
       const batch = await fetchKoroadPage(page, PAGE_SIZE);
       totalCount = batch.totalCount;
       collected.push(...batch.questions);

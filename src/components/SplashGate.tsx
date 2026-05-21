@@ -3,11 +3,17 @@ import { SplashScreen } from '@/components/SplashScreen';
 import { useQuestions } from '@/context/QuestionsContext';
 
 const MIN_SPLASH_MS = 1600;
+const MAX_SPLASH_MS = 10_000;
 
 export function SplashGate({ children }: { children: React.ReactNode }) {
   const { isLoading } = useQuestions();
   const [visible, setVisible] = useState(true);
   const mountedAt = useRef(Date.now());
+
+  useEffect(() => {
+    const forceHide = setTimeout(() => setVisible(false), MAX_SPLASH_MS);
+    return () => clearTimeout(forceHide);
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;

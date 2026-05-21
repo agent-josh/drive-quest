@@ -6,7 +6,8 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { fetchKoroadQuestions } from '@/lib/koroadApi';
+import { Platform } from 'react-native';
+import { fetchKoroadQuestions, getFallbackQuestions } from '@/lib/koroadApi';
 import type { AppQuestion, QuestionSource } from '@/types/koroad';
 
 interface QuestionsContextValue {
@@ -29,6 +30,28 @@ export function QuestionsProvider({ children }: { children: React.ReactNode }) {
 
   const reload = useCallback(async () => {
     setIsLoading(true);
+
+    if (Platform.OS === 'web') {
+      const fallback = getFallbackQuestions();
+      setQuestions(fallback);
+      setSource('fallback');
+      setTotalCount(fallback.length);
+      setStatusMessage(
+        '웹에서는 빠른 실행을 위해 샘플 문제로 시작합니다. (전체 1,000문항은 앱·API 연동 시)',
+      );
+      setIsLoading(false);
+
+      void fetchKoroadQuestions({ maxItems: 1000 }).then((result) => {
+        if (result.questions.length > fallback.length) {
+          setQuestions(result.questions);
+          setSource(result.source);
+          setTotalCount(result.totalCount);
+          setStatusMessage(result.error ?? null);
+        }
+      });
+      return;
+    }
+
     const result = await fetchKoroadQuestions({ maxItems: 1000 });
     setQuestions(result.questions);
     setSource(result.source);

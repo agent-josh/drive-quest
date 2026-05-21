@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   PanResponder,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -16,6 +17,7 @@ import { typography } from '@/theme/typography';
 
 const SWIPE_THRESHOLD = 72;
 const ANIM_MS = 100;
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 const EXIT_X = SCREEN_W * 0.55;
 const CARD_MAX_H = Math.min(SCREEN_H * 0.58, 460);
@@ -57,8 +59,8 @@ export function FlashCard({
     setCoachVisible(true);
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(coachOpacity, { toValue: 0.55, duration: 600, useNativeDriver: true }),
-        Animated.timing(coachOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(coachOpacity, { toValue: 0.55, duration: 600, useNativeDriver: USE_NATIVE_DRIVER }),
+        Animated.timing(coachOpacity, { toValue: 1, duration: 600, useNativeDriver: USE_NATIVE_DRIVER }),
       ]),
     );
     pulse.start();
@@ -72,7 +74,7 @@ export function FlashCard({
     Animated.timing(pan, {
       toValue: { x: toX, y: 0 },
       duration: ANIM_MS,
-      useNativeDriver: true,
+      useNativeDriver: USE_NATIVE_DRIVER,
     }).start(() => {
       resetCard();
       onDone();
@@ -107,7 +109,7 @@ export function FlashCard({
         }
         Animated.spring(pan, {
           toValue: { x: 0, y: 0 },
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
           speed: 28,
           bounciness: 6,
         }).start();
