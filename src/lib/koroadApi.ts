@@ -2,7 +2,9 @@ import { Platform } from 'react-native';
 import {
   DATA_GO_KR_SERVICE_KEY,
   KOROAD_DATASET_ID,
+  KOROAD_PROXY_URL,
   KOROAD_UDDI,
+  KOROAD_USE_DIRECT_API,
 } from '@/constants/config';
 import { LEARNING_TOTAL_QUESTIONS } from '@/constants/learningCourse';
 import { stripOptionPrefix } from '@/lib/questionText';
@@ -11,9 +13,27 @@ import type { AppQuestion, KoroadFetchResult, QuestionSource } from '@/types/kor
 const API_BASE = `https://api.odcloud.kr/api/${KOROAD_DATASET_ID}/v1/uddi:${KOROAD_UDDI}`;
 const PAGE_SIZE = 200;
 
-/** 웹(Vercel)에서는 /api/koroad 프록시로 CORS·키 노출 방지 */
-function useWebProxy(): boolean {
-  return Platform.OS === 'web' && typeof window !== 'undefined';
+/** Vercel 배포·Expo Go·로컬 웹 모두 동일 프록시로 1,000문항 로드 */
+function getKoroadProxyOrigin(): string | null {
+  if (KOROAD_USE_DIRECT_API && DATA_GO_KR_SERVICE_KEY) {
+    return null;
+  }
+
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host.includes('vercel.app')) {
+      return window.location.origin;
+    }
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return KOROAD_PROXY_URL.replace(/\/$/, '');
+    }
+  }
+
+  return KOROAD_PROXY_URL.replace(/\/$/, '');
+}
+
+function useKoroadProxy(): boolean {
+  return getKoroadProxyOrigin() !== null;
 }
 
 type FallbackRow = {
@@ -121,7 +141,7 @@ function dedupeByQuestionNumber(questions: AppQuestion[]): AppQuestion[] {
   return [...byNum.values()].sort((a, b) => a.questionNumber - b.questionNumber);
 }
 
-const FETCH_TIMEOUT_MS = Platform.OS === 'web' ? 12_000 : 30_000;
+const FETCH_TIMEOUT_MS = useKoroadProxy() ? 25_000 : Platform.OS === 'web' ? 12_000 : 30_000;
 
 async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS) {
   const controller = new AbortController();
@@ -134,8 +154,9 @@ async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS) {
 }
 
 function buildPageUrl(page: number, perPage: number): string {
-  if (useWebProxy()) {
-    return `/api/koroad?page=${page}&perPage=${perPage}`;
+  const proxyOrigin = getKoroadProxyOrigin();
+  if (proxyOrigin) {
+    return `${proxyOrigin}/api/koroad?page=${page}&perPage=${perPage}`;
   }
   return (
     `${API_BASE}?page=${page}&perPage=${perPage}` +
@@ -174,7 +195,7 @@ export async function fetchKoroadQuestions(options?: {
   maxItems?: number;
 }): Promise<KoroadFetchResult> {
   const maxItems = options?.maxItems ?? LEARNING_TOTAL_QUESTIONS;
-  const viaProxy = useWebProxy();
+  const viaProxy = useKoroadProxy();
 
   if (!viaProxy && !DATA_GO_KR_SERVICE_KEY) {
     const questions = getFallbackQuestions();
@@ -231,8 +252,8 @@ export async function fetchKoroadQuestions(options?: {
   } catch (e) {
     const questions = getFallbackQuestions();
     const message = e instanceof Error ? e.message : 'API 연결 실패';
-    const webHint = useWebProxy()
-      ? ' Vercel → Settings → Environment Variables → DATA_GO_KR_SERVICE_KEY 설정 후 Redeploy.'
+    const webHint = useKoroadProxy()
+      ? ' Vercel에 DATA_GO_KR_SERVICE_KEY가 설정됐는지 확인하세요.'
       : '';
     return {
       questions,

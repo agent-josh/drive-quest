@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AppQuestion } from '@/types/koroad';
 
-const CACHE_KEY = 'drive-quest-questions-cache-v1';
+const CACHE_KEY = 'drive-quest-questions-cache-v2';
 
 interface QuestionsCachePayload {
   questions: AppQuestion[];

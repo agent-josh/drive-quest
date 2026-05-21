@@ -20,3 +20,10 @@ export const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
 export const KOROAD_DATASET_ID = '15100163';
 export const KOROAD_UDDI = '602623e8-9263-48f1-b53c-ad7cd88ff6f5';
 export const DATA_GO_KR_SERVICE_KEY = process.env.EXPO_PUBLIC_DATA_GO_KR_SERVICE_KEY ?? '';
+
+/** Expo Go·로컬 개발도 Vercel과 동일한 1,000문항 API 프록시 사용 */
+export const KOROAD_PROXY_URL =
+  process.env.EXPO_PUBLIC_KOROAD_PROXY_URL ?? 'https://drive-quest-two.vercel.app';
+
+/** true면 공공 API 직접 호출 (로컬 .env 키 필요) */
+export const KOROAD_USE_DIRECT_API = process.env.EXPO_PUBLIC_KOROAD_USE_DIRECT === 'true';
