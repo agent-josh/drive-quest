@@ -7,6 +7,7 @@
     "start:tunnel": "expo start --tunnel --port 8083",
     "start:lan": "expo start --lan --port 8083",
     "build:web": "expo export --platform web --output-dir dist",
+    "build:toss": "npm run build:web && echo WebView 번들: dist 폴더를 ait 빌드에 사용하세요. docs/TOSS-RELEASE-KO.md 참고",
     "preview:web": "npx serve dist",
     "android": "expo start --android",
     "ios": "expo start --ios",

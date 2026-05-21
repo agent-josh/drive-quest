@@ -61,6 +61,10 @@ EXPO_PUBLIC_SUPABASE_URL=...
 EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
+## 토스 앱인토스 출시
+
+토스 미니앱 등록·WebView 설정·체크리스트: **[docs/TOSS-RELEASE-KO.md](docs/TOSS-RELEASE-KO.md)**
+
 ## 웹으로 공개 배포 (링크 공유 · 자동 업데이트)
 
 친구에게 보여 주려면 **Vercel + GitHub** 가 가장 쉽습니다.  

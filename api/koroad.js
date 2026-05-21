@@ -7,8 +7,23 @@ const DATASET_ID = '15100163';
 const UDDI = '602623e8-9263-48f1-b53c-ad7cd88ff6f5';
 const API_BASE = `https://api.odcloud.kr/api/${DATASET_ID}/v1/uddi:${UDDI}`;
 
+function corsOrigin(req) {
+  const origin = req.headers.origin || req.headers.Origin || '';
+  if (!origin) return '*';
+  if (
+    origin.includes('vercel.app') ||
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1') ||
+    origin.includes('apps.tossmini.com') ||
+    origin.includes('toss.im')
+  ) {
+    return origin;
+  }
+  return '*';
+}
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', corsOrigin(req));
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
 

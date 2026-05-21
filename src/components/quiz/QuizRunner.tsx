@@ -21,7 +21,6 @@ interface QuizRunnerProps {
   reviewMode?: boolean;
 }
 
-const FOOTER_HEIGHT = 76;
 const QUESTION_MAX_H = Math.min(200, Dimensions.get('window').height * 0.3);
 
 function countCorrect(questions: AppQuestion[], answers: Map<string, number>): number {
@@ -158,17 +157,18 @@ export function QuizRunner({
       </View>
 
       <View style={styles.footer}>
-        <Text
-          style={[
-            styles.feedbackLine,
-            !feedbackLine && styles.feedbackLineHidden,
-            feedbackLine && (isCorrect ? styles.feedbackOk : styles.feedbackNg),
-          ]}
-        >
-          {feedbackLine ?? ' '}
-        </Text>
+        {feedbackLine ? (
+          <Text
+            style={[
+              styles.feedbackLine,
+              isCorrect ? styles.feedbackOk : styles.feedbackNg,
+            ]}
+          >
+            {feedbackLine}
+          </Text>
+        ) : null}
         <Button
-          title={canProceed ? nextLabel : reviewMode ? '보기를 선택하세요' : '보기를 선택하세요'}
+          title={canProceed ? nextLabel : '보기를 선택하세요'}
           onPress={goNext}
           disabled={!canProceed}
           fullWidth
@@ -230,22 +230,14 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   footer: {
-    height: FOOTER_HEIGHT,
-    justifyContent: 'flex-end',
-    gap: spacing.xs,
     flexShrink: 0,
-    paddingTop: spacing.xs,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
   },
   feedbackLine: {
     ...typography.small,
     fontWeight: '700',
     textAlign: 'center',
-    height: 18,
-  },
-  feedbackLineHidden: {
-    opacity: 0,
   },
   feedbackOk: { color: colors.success },
   feedbackNg: { color: colors.error },
