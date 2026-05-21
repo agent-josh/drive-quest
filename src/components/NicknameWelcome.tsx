@@ -40,7 +40,7 @@ export function NicknameWelcome() {
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <Text style={styles.emoji}>🛣️</Text>
-          <Text style={styles.title}>Drive Quest</Text>
+          <Text style={styles.title}>운전면허 퀘스트</Text>
           <Text style={styles.desc}>
             개인 플래시카드·퀴즈 모드입니다.{'\n'}
             닉네임과 학습 기록은 <Text style={styles.bold}>이 기기(브라우저)</Text>에만 저장됩니다.

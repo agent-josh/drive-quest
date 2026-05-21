@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { OptionButton } from '@/components/quiz/OptionButton';
 import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
@@ -17,11 +17,12 @@ export interface QuizResult {
 interface QuizRunnerProps {
   questions: AppQuestion[];
   onComplete: (result: QuizResult) => void;
-  /** 문항마다 정답/오답 즉시 표시 (학습 확인 퀴즈) */
   showFeedback?: boolean;
-  /** 오답노트: 선택만 하고 마지막에 일괄 채점 */
   reviewMode?: boolean;
 }
+
+const FOOTER_HEIGHT = 76;
+const QUESTION_MAX_H = Math.min(200, Dimensions.get('window').height * 0.3);
 
 function countCorrect(questions: AppQuestion[], answers: Map<string, number>): number {
   let count = 0;
@@ -61,6 +62,7 @@ export function QuizRunner({
 
   const goNext = useCallback(() => {
     if (reviewMode && selected === null) return;
+    if (!reviewMode && !answered) return;
 
     if (isLast) {
       finish();
@@ -71,7 +73,7 @@ export function QuizRunner({
     setIndex(nextIndex);
     setSelected(answers.get(nextQ.id) ?? null);
     setAnswered(false);
-  }, [index, isLast, finish, reviewMode, selected, questions, answers]);
+  }, [index, isLast, finish, reviewMode, selected, answered, questions, answers]);
 
   const handleSelect = (optionNum: number) => {
     if (!current) return;
@@ -91,14 +93,19 @@ export function QuizRunner({
   if (!current) return null;
 
   const isCorrect = selected === current.correctAnswer;
-  const showFooter = reviewMode ? selected !== null : answered;
+  const canProceed = reviewMode ? selected !== null : answered;
   const nextLabel = isLast
     ? reviewMode
       ? '결과 보기'
-      : showFeedback
-        ? '결과 보기'
-        : '제출'
+      : '결과 보기'
     : '다음';
+
+  const feedbackLine =
+    !reviewMode && answered && showFeedback
+      ? isCorrect
+        ? '정답이에요'
+        : `오답 · 정답 ${current.correctAnswer}번`
+      : null;
 
   return (
     <View style={styles.root}>
@@ -107,75 +114,66 @@ export function QuizRunner({
           <ProgressBar progress={Math.min(1, progress)} height={6} />
         </View>
         <Text style={styles.progressText}>
-          {reviewMode ? `${answeredCount}/${questions.length}` : `${Math.min(index + (answered ? 1 : 0), questions.length)}/${questions.length}`}
+          {reviewMode
+            ? `${answeredCount}/${questions.length}`
+            : `${Math.min(index + (answered ? 1 : 0), questions.length)}/${questions.length}`}
         </Text>
       </View>
 
-      <ScrollView
-        style={styles.questionScroll}
-        contentContainerStyle={styles.questionScrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        <Text style={styles.category}>{current.category}</Text>
-        <Text style={styles.questionText}>{current.content}</Text>
-        {reviewMode && (
-          <Text style={styles.reviewHint}>보기를 고른 뒤 다음으로 넘기세요</Text>
-        )}
-      </ScrollView>
+      <View style={styles.body}>
+        <ScrollView
+          style={styles.questionScroll}
+          contentContainerStyle={styles.questionScrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          nestedScrollEnabled
+        >
+          <Text style={styles.category}>{current.category}</Text>
+          <Text style={styles.questionText}>{current.content}</Text>
+        </ScrollView>
 
-      <View style={styles.options}>
-        {current.options.map((opt, i) => {
-          const num = (i + 1) as 1 | 2 | 3 | 4;
-          let state: 'default' | 'selected' | 'correct' | 'wrong' = 'default';
-          if (!reviewMode && answered && showFeedback) {
-            if (num === current.correctAnswer) state = 'correct';
-            else if (num === selected) state = 'wrong';
-          } else if (num === selected) {
-            state = 'selected';
-          }
-          return (
-            <OptionButton
-              key={num}
-              number={num}
-              text={stripOptionPrefix(opt)}
-              state={state}
-              disabled={!reviewMode && answered}
-              compact
-              onPress={() => handleSelect(num)}
-            />
-          );
-        })}
+        <View style={styles.options}>
+          {current.options.map((opt, i) => {
+            const num = (i + 1) as 1 | 2 | 3 | 4;
+            let state: 'default' | 'selected' | 'correct' | 'wrong' = 'default';
+            if (!reviewMode && answered && showFeedback) {
+              if (num === current.correctAnswer) state = 'correct';
+              else if (num === selected) state = 'wrong';
+            } else if (num === selected) {
+              state = 'selected';
+            }
+            return (
+              <OptionButton
+                key={num}
+                number={num}
+                text={stripOptionPrefix(opt)}
+                state={state}
+                disabled={!reviewMode && answered}
+                compact
+                onPress={() => handleSelect(num)}
+              />
+            );
+          })}
+        </View>
       </View>
 
-      {showFooter && (
-        <View style={styles.footer}>
-          {!reviewMode && showFeedback && (
-            <View
-              style={[
-                styles.feedbackBanner,
-                isCorrect ? styles.feedbackOk : styles.feedbackNg,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.feedbackTitle,
-                  isCorrect ? styles.feedbackOkText : styles.feedbackNgText,
-                ]}
-              >
-                {isCorrect ? '정답이에요' : '오답이에요'}
-              </Text>
-              {!isCorrect && (
-                <Text style={styles.feedbackAnswer} numberOfLines={2}>
-                  정답 {current.correctAnswer}번 ·{' '}
-                  {stripOptionPrefix(current.options[current.correctAnswer - 1] ?? '')}
-                </Text>
-              )}
-            </View>
-          )}
-          <Button title={nextLabel} onPress={goNext} fullWidth />
-        </View>
-      )}
+      <View style={styles.footer}>
+        <Text
+          style={[
+            styles.feedbackLine,
+            !feedbackLine && styles.feedbackLineHidden,
+            feedbackLine && (isCorrect ? styles.feedbackOk : styles.feedbackNg),
+          ]}
+        >
+          {feedbackLine ?? ' '}
+        </Text>
+        <Button
+          title={canProceed ? nextLabel : reviewMode ? '보기를 선택하세요' : '보기를 선택하세요'}
+          onPress={goNext}
+          disabled={!canProceed}
+          fullWidth
+        />
+      </View>
     </View>
   );
 }
@@ -184,13 +182,13 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     minHeight: 0,
-    gap: spacing.sm,
   },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     flexShrink: 0,
+    marginBottom: spacing.sm,
   },
   progressBarWrap: { flex: 1 },
   progressText: {
@@ -200,14 +198,19 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
   },
-  questionScroll: {
+  body: {
     flex: 1,
     minHeight: 0,
+    gap: spacing.sm,
+  },
+  questionScroll: {
+    flexGrow: 0,
     flexShrink: 1,
+    maxHeight: QUESTION_MAX_H,
   },
   questionScrollContent: {
     paddingVertical: spacing.xs,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   category: {
     ...typography.small,
@@ -218,30 +221,32 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text,
     lineHeight: 22,
-  },
-  reviewHint: {
-    ...typography.small,
-    color: colors.textMuted,
+    fontSize: 15,
   },
   options: {
+    flex: 1,
+    minHeight: 0,
     gap: spacing.xs,
-    flexShrink: 0,
+    justifyContent: 'flex-start',
   },
   footer: {
-    gap: spacing.sm,
+    height: FOOTER_HEIGHT,
+    justifyContent: 'flex-end',
+    gap: spacing.xs,
     flexShrink: 0,
     paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
-  feedbackBanner: {
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: 2,
+  feedbackLine: {
+    ...typography.small,
+    fontWeight: '700',
+    textAlign: 'center',
+    height: 18,
   },
-  feedbackOk: { backgroundColor: colors.successBg },
-  feedbackNg: { backgroundColor: colors.errorBg },
-  feedbackTitle: { ...typography.bodyBold },
-  feedbackOkText: { color: colors.success },
-  feedbackNgText: { color: colors.error },
-  feedbackAnswer: { ...typography.small, color: colors.textSecondary },
+  feedbackLineHidden: {
+    opacity: 0,
+  },
+  feedbackOk: { color: colors.success },
+  feedbackNg: { color: colors.error },
 });

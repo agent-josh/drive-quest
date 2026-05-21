@@ -43,7 +43,9 @@ export function OptionButton({
       >
         <Text style={styles.numText}>{number}</Text>
       </View>
-      <Text style={styles.text}>{text}</Text>
+      <Text style={styles.text} selectable>
+        {text}
+      </Text>
     </Pressable>
   );
 }
@@ -51,7 +53,7 @@ export function OptionButton({
 const styles = StyleSheet.create({
   option: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.md,
     padding: spacing.md,
     backgroundColor: colors.surfaceMuted,
@@ -78,5 +80,13 @@ const styles = StyleSheet.create({
   numCorrect: { backgroundColor: '#D1FAE5' },
   numWrong: { backgroundColor: '#FEE2E2' },
   numText: { ...typography.bodyBold, color: colors.primary },
-  text: { ...typography.body, color: colors.text, flex: 1 },
+  text: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
+    flexShrink: 1,
+    lineHeight: 20,
+    fontSize: 14,
+    paddingTop: 2,
+  },
 });

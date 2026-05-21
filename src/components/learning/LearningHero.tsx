@@ -15,7 +15,7 @@ export function LearningHero({ totalSeen, totalTarget }: LearningHeroProps) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.kicker}>DRIVE QUEST</Text>
+      <Text style={styles.kicker}>운전면허 퀘스트</Text>
       <Text style={styles.title}>필기시험 준비하기</Text>
       <Text style={styles.tagline}>
         하루 20문항만 가볍게 달려도, 1종 필기 완주 코스가 눈앞에!

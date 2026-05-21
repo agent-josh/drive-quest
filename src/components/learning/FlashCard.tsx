@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   PanResponder,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -18,9 +18,7 @@ import { typography } from '@/theme/typography';
 const SWIPE_THRESHOLD = 72;
 const ANIM_MS = 100;
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
-const EXIT_X = SCREEN_W * 0.55;
-const CARD_MAX_H = Math.min(SCREEN_H * 0.58, 460);
+const EXIT_X = 320;
 
 interface FlashCardProps {
   question: AppQuestion;
@@ -44,10 +42,11 @@ export function FlashCard({
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const coachOpacity = useRef(new Animated.Value(showSwipeCoach ? 1 : 0)).current;
   const [coachVisible, setCoachVisible] = useState(showSwipeCoach);
+  const [cardWidth, setCardWidth] = useState(300);
 
   const rotate = pan.x.interpolate({
-    inputRange: [-SCREEN_W, 0, SCREEN_W],
-    outputRange: ['-8deg', '0deg', '8deg'],
+    inputRange: [-cardWidth, 0, cardWidth],
+    outputRange: ['-6deg', '0deg', '6deg'],
     extrapolate: 'clamp',
   });
 
@@ -93,7 +92,7 @@ export function FlashCard({
 
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 6 || Math.abs(g.dy) > 6,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8,
       onPanResponderMove: (_, g) => {
         const clamped = !canGoBack && g.dx > 0 ? g.dx * 0.25 : g.dx;
         pan.setValue({ x: clamped, y: 0 });
@@ -125,19 +124,24 @@ export function FlashCard({
 
       {coachVisible && (
         <Animated.View style={[styles.coachBanner, { opacity: coachOpacity }]}>
-          <Text style={styles.coachText}>👆 카드를 손가락으로 ← 밀면 다음 · → 밀면 이전</Text>
+          <Text style={styles.coachText}>← 밀면 다음 · → 밀면 이전</Text>
         </Animated.View>
       )}
 
       <Animated.View
-        style={[styles.card, { maxHeight: CARD_MAX_H, transform: [{ translateX: pan.x }, { rotate }] }]}
+        style={[styles.card, { transform: [{ translateX: pan.x }, { rotate }] }]}
+        onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
         {...panResponder.panHandlers}
       >
-        <View style={styles.cardBody}>
+        <ScrollView
+          style={styles.cardScroll}
+          contentContainerStyle={styles.cardScrollContent}
+          showsVerticalScrollIndicator
+          nestedScrollEnabled
+          bounces={false}
+        >
           <Text style={styles.label}>문제</Text>
-          <Text style={styles.content} numberOfLines={4}>
-            {question.content}
-          </Text>
+          <Text style={styles.content}>{question.content}</Text>
           <View style={styles.options}>
             {question.options.map((opt, i) => {
               const num = i + 1;
@@ -153,17 +157,14 @@ export function FlashCard({
                       {num}
                     </Text>
                   </View>
-                  <Text
-                    style={[styles.optionText, isCorrect && styles.optionTextCorrect]}
-                    numberOfLines={2}
-                  >
+                  <Text style={[styles.optionText, isCorrect && styles.optionTextCorrect]}>
                     {label}
                   </Text>
                 </View>
               );
             })}
           </View>
-        </View>
+        </ScrollView>
 
         <View style={styles.swipeHint}>
           <Text style={styles.swipeArrow}>←</Text>
@@ -183,25 +184,26 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '700',
     fontSize: 13,
+    flexShrink: 0,
   },
   coachBanner: {
     backgroundColor: '#EEF2FF',
     borderRadius: radius.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderWidth: 1.5,
     borderColor: colors.primary,
+    flexShrink: 0,
   },
   coachText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.primary,
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 19,
   },
   card: {
-    flexGrow: 1,
-    flexShrink: 1,
+    flex: 1,
+    minHeight: 0,
     borderRadius: radius.xl,
     backgroundColor: colors.surface,
     borderWidth: 2,
@@ -209,25 +211,28 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     elevation: 4,
   },
-  cardBody: {
+  cardScroll: {
     flex: 1,
+    minHeight: 0,
+  },
+  cardScrollContent: {
     padding: spacing.md,
     gap: spacing.sm,
-    justifyContent: 'flex-start',
+    paddingBottom: spacing.lg,
   },
   label: { fontSize: 12, color: colors.primary, fontWeight: '700' },
   content: {
-    fontSize: 16,
-    lineHeight: 23,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.text,
     fontWeight: '600',
   },
-  options: { gap: 7 },
+  options: { gap: 8 },
   option: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
-    paddingVertical: 9,
+    paddingVertical: 10,
     paddingHorizontal: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceMuted,
@@ -245,6 +250,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 1,
   },
   optionNumCorrect: { backgroundColor: colors.success },
   optionNumText: { fontSize: 13, fontWeight: '800', color: colors.primary },
@@ -253,7 +259,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexShrink: 1,
     fontSize: 14,
-    lineHeight: 19,
+    lineHeight: 20,
     color: colors.text,
   },
   optionTextCorrect: { color: '#166534', fontWeight: '600' },
@@ -262,11 +268,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.surfaceMuted,
+    flexShrink: 0,
   },
-  swipeArrow: { fontSize: 20, color: colors.primary, fontWeight: '800' },
-  swipeLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '700' },
+  swipeArrow: { fontSize: 18, color: colors.primary, fontWeight: '800' },
+  swipeLabel: { fontSize: 12, color: colors.textSecondary, fontWeight: '700' },
 });

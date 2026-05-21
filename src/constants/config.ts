@@ -1,4 +1,4 @@
-export const APP_NAME = 'Drive Quest';
+export const APP_NAME = '운전면허 퀘스트';
 
 /** 로그인 없이 UI·학습만 체험하는 데모 모드 */
 export const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE !== 'false';
