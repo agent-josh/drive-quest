@@ -34,12 +34,17 @@ git push -u origin main
 3. 설정 확인 (자동 인식됨):
    - **Build Command:** `npm run build:web`
    - **Output Directory:** `dist`
-4. **Environment Variables** 추가:
+4. **Environment Variables** 추가 (필수·1,000문항용):
 
 | 이름 | 값 |
 |------|-----|
 | `EXPO_PUBLIC_DEMO_MODE` | `true` |
-| `EXPO_PUBLIC_DATA_GO_KR_SERVICE_KEY` | (선택) 공공데이터 API 키 |
+| `DATA_GO_KR_SERVICE_KEY` | 공공데이터포털 **디코딩된** 인증키 (`.env`와 동일) |
+
+> 웹은 브라우저 보안(CORS) 때문에 API를 직접 호출할 수 없습니다.  
+> `api/koroad.js` 프록시가 서버에서 1,000문항을 가져옵니다. **키 없으면 샘플 15문항만** 보입니다.
+
+5. 변수 추가 후 **Redeploy** (Deployments → ⋯ → Redeploy)
 
 5. **Deploy** 클릭 → 2~3분 후 URL 발급  
    예: `https://drive-quest-xxx.vercel.app`

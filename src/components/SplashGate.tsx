@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { SplashScreen } from '@/components/SplashScreen';
 import { useQuestions } from '@/context/QuestionsContext';
 
-const MIN_SPLASH_MS = 1600;
-const MAX_SPLASH_MS = 10_000;
+const MIN_SPLASH_MS = Platform.OS === 'web' ? 600 : 1600;
+const MAX_SPLASH_MS = Platform.OS === 'web' ? 6000 : 10_000;
 
 export function SplashGate({ children }: { children: React.ReactNode }) {
   const { isLoading } = useQuestions();

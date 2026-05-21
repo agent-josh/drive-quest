@@ -11,6 +11,11 @@ import type { AppQuestion, KoroadFetchResult, QuestionSource } from '@/types/kor
 const API_BASE = `https://api.odcloud.kr/api/${KOROAD_DATASET_ID}/v1/uddi:${KOROAD_UDDI}`;
 const PAGE_SIZE = 200;
 
+/** 웹(Vercel)에서는 /api/koroad 프록시로 CORS·키 노출 방지 */
+function useWebProxy(): boolean {
+  return Platform.OS === 'web' && typeof window !== 'undefined';
+}
+
 type FallbackRow = {
   questionNumber: number;
   category: string;
@@ -128,12 +133,18 @@ async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS) {
   }
 }
 
-async function fetchKoroadPage(page: number, perPage: number) {
-  const url =
+function buildPageUrl(page: number, perPage: number): string {
+  if (useWebProxy()) {
+    return `/api/koroad?page=${page}&perPage=${perPage}`;
+  }
+  return (
     `${API_BASE}?page=${page}&perPage=${perPage}` +
-    `&serviceKey=${encodeURIComponent(DATA_GO_KR_SERVICE_KEY)}`;
+    `&serviceKey=${encodeURIComponent(DATA_GO_KR_SERVICE_KEY)}`
+  );
+}
 
-  const res = await fetchWithTimeout(url);
+async function fetchKoroadPage(page: number, perPage: number) {
+  const res = await fetchWithTimeout(buildPageUrl(page, perPage));
   const json = (await res.json()) as {
     data?: Record<string, unknown>[];
     totalCount?: number;
@@ -163,15 +174,16 @@ export async function fetchKoroadQuestions(options?: {
   maxItems?: number;
 }): Promise<KoroadFetchResult> {
   const maxItems = options?.maxItems ?? LEARNING_TOTAL_QUESTIONS;
+  const viaProxy = useWebProxy();
 
-  if (!DATA_GO_KR_SERVICE_KEY) {
+  if (!viaProxy && !DATA_GO_KR_SERVICE_KEY) {
     const questions = getFallbackQuestions();
     return {
       questions,
       source: 'fallback',
       totalCount: questions.length,
       error:
-        'API 키가 없어 샘플만 표시합니다. .env에 EXPO_PUBLIC_DATA_GO_KR_SERVICE_KEY를 넣으면 1,000문항을 불러옵니다. CSV는 추후 assets에 넣을 예정입니다.',
+        'API 키가 없어 샘플만 표시합니다. .env에 EXPO_PUBLIC_DATA_GO_KR_SERVICE_KEY를 넣으면 1,000문항을 불러옵니다.',
     };
   }
 
@@ -191,20 +203,19 @@ export async function fetchKoroadQuestions(options?: {
     }
   }
 
-  const maxPages = Platform.OS === 'web' ? 3 : 10;
+  const pageCount = Math.min(10, Math.ceil(maxItems / PAGE_SIZE));
 
   try {
+    const pageNums = Array.from({ length: pageCount }, (_, i) => i + 1);
+    const batches = await Promise.all(
+      pageNums.map((p) => fetchKoroadPage(p, PAGE_SIZE)),
+    );
+
     const collected: AppQuestion[] = [];
     let totalCount = 0;
-    let page = 1;
-
-    while (collected.length < maxItems && page <= maxPages) {
-      const batch = await fetchKoroadPage(page, PAGE_SIZE);
-      totalCount = batch.totalCount;
+    for (const batch of batches) {
+      totalCount = Math.max(totalCount, batch.totalCount);
       collected.push(...batch.questions);
-      if (batch.questions.length < PAGE_SIZE) break;
-      if (collected.length >= totalCount) break;
-      page += 1;
     }
 
     const questions = dedupeByQuestionNumber(collected).slice(0, maxItems);
@@ -220,11 +231,14 @@ export async function fetchKoroadQuestions(options?: {
   } catch (e) {
     const questions = getFallbackQuestions();
     const message = e instanceof Error ? e.message : 'API 연결 실패';
+    const webHint = useWebProxy()
+      ? ' Vercel → Settings → Environment Variables → DATA_GO_KR_SERVICE_KEY 설정 후 Redeploy.'
+      : '';
     return {
       questions,
       source: 'fallback',
       totalCount: questions.length,
-      error: `${message} — 샘플 문제로 대체합니다.`,
+      error: `${message} — 샘플 문제로 대체합니다.${webHint}`,
     };
   }
 }
